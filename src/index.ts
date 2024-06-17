@@ -3,6 +3,4 @@ if (String(process.env.NODE_ENV).trim() !== 'dev') {
 }
 import app from './app';
 
-(async () => {
-  await app();
-})();
+(async () => { await app(); })();

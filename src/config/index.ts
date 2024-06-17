@@ -1,19 +1,4 @@
 const config = {
-  consul: {
-    server: {
-      prod: {
-        host: 'consul',
-        port: '8500',
-      },
-      dev: {
-        host: 'localhost',
-        port: '8501',
-      },
-    },
-    service: {
-      name: 'nodejs-sample',
-    },
-  },
   log4js: {
     appenders: {
       console: {

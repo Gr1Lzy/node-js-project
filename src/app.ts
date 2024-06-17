@@ -3,7 +3,6 @@ import routers from './routers';
 import config from './config';
 import log4js, { Configuration } from 'log4js';
 import mongoose, { ConnectOptions } from 'mongoose';
-import Consul, { ConsulOptions } from 'consul';
 
 type EnvType = 'dev' | 'prod';
 
@@ -12,18 +11,7 @@ if (String(process.env.NODE_ENV).trim() === 'dev') {
   env = 'dev';
 }
 
-const consulServer = new Consul(config.consul.server[env] as ConsulOptions);
-
-const prefix = `config/${config.consul.service.name}`;
-
-type ConsulResult = {
-	Value: string | number,
-};
-
-const getConsulValue = async (key: string) => {
-  const result: ConsulResult = await consulServer.kv.get(`${prefix}/${key}`);
-  return result?.Value;
-};
+const mongoAddress = 'mongodb://localhost:27017/Genres';
 
 export default async () => {
   const app = express();
@@ -52,18 +40,24 @@ export default async () => {
 
   app.use('/', routers);
 
-  const port = await getConsulValue(`${env}/port`) as number;
-  const address = await getConsulValue(`${env}/address`) as string;
+  const port = env === 'dev' ? 3000 : 8888;
+  const address = '0.0.0.0';
+
   app.listen(port, address, () => {
     log4js.getLogger().info(`Example app listening on port ${address}:${port}`);
   });
 
-  const mongoAddress = await getConsulValue(`${env}/mongo.address`) as string;
   await mongoose.connect(mongoAddress, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     socketTimeoutMS: 30000,
-  } as ConnectOptions);
+  } as ConnectOptions)
+    .then(() => {
+      console.log('Connected to MongoDB');
+    })
+    .catch((err) => {
+      console.error('Error connecting to MongoDB:', err);
+    });
 
   return app;
 };

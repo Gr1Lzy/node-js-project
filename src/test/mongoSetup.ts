@@ -1,43 +1,31 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose, { ConnectOptions } from 'mongoose';
 
-const mongoServer = new MongoMemoryServer();
+let mongoServer: MongoMemoryServer;
 
-const connectionPromise = new Promise((resolve, reject) => {
-  mongoServer.start()
-    .then(() => {
-      const mongoUri = mongoServer.getUri();
-      const mongooseOpts = {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        socketTimeoutMS: 30000,
-      };
-      mongoose.connect(mongoUri, mongooseOpts as ConnectOptions);
+const connect = async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const uri = mongoServer.getUri();
+  await mongoose.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  } as ConnectOptions);
+};
 
-      mongoose.connection.on('connected', () => {
-        resolve(mongoose.connection);
-      });
+const closeDatabase = async () => {
+  await mongoose.connection.dropDatabase();
+  await mongoose.connection.close();
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
+};
 
-      mongoose.connection.on('error', (err) => {
-        console.error('Mockgoose error');
-        console.error(err);
+const clearDatabase = async () => {
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    const collection = collections[key];
+    await collection.deleteMany({});
+  }
+};
 
-        if (err.message.code === 'ETIMEDOUT') {
-          mongoose.connect(mongoUri, mongooseOpts);
-        }
-      });
-
-      return null;
-    })
-    .catch((err) => {
-      console.error('Error in prepareStorage');
-      console.error(err);
-      reject(err);
-    });
-});
-
-/**
- * This promise is resolved when the test database
- * is ready and the connection has been made.
- */
-export default connectionPromise;
+export { connect, closeDatabase, clearDatabase };
